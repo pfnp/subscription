@@ -1,8 +1,0 @@
-{
-  "name": "Подписки",
-  "short_name": "Subs",
-  "start_url": "./",
-  "display": "standalone",
-  "background_color": "#e8d8a8",
-  "theme_color": "#e8d8a8"
-}
