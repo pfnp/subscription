@@ -1,130 +1,89 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Subscriptions</title>
-
-<link rel="manifest" href="manifest.json">
-
-<style>
-body { font-family: Arial; background:#111; color:#fff; max-width:600px; margin:auto;}
-input, button, select { padding:10px; margin:5px;}
-.card { border:1px solid #444; padding:10px; margin-top:10px; border-radius:10px;}
-.today { border-color:red; }
-.soon { border-color:orange; }
-</style>
+  <meta charset="UTF-8">
+  <title>Трекер подписок</title>
+  <style>
+    body {
+      font-family: Arial;
+      max-width: 600px;
+      margin: auto;
+      background: #111;
+      color: #fff;
+    }
+    input, button {
+      padding: 10px;
+      margin: 5px;
+    }
+    .card {
+      border: 1px solid #444;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 10px;
+    }
+  </style>
 </head>
-
 <body>
 
-<h2>Подписки</h2>
+<h2>📊 Подписки</h2>
 
-<input id="name" placeholder="Название">
+<input id="name" placeholder="Название (Netflix)">
 <input id="price" type="number" placeholder="Цена">
 <input id="date" type="date">
+<button onclick="addSub()">Добавить</button>
 
-<select id="period">
-  <option value="month">Месяц</option>
-  <option value="year">Год</option>
-</select>
-
-<button onclick="add()">Добавить</button>
-
+<h3>Список</h3>
 <div id="list"></div>
 
-<script>
-// хранилище
-let subs = JSON.parse(localStorage.getItem("subs") || "[]");
+<h3>Итого в месяц: <span id="total">0</span> ₽</h3>
 
-function save(){
+<script>
+let subs = JSON.parse(localStorage.getItem("subs")) || [];
+
+function save() {
   localStorage.setItem("subs", JSON.stringify(subs));
 }
 
-// пересчет даты
-function nextDate(date, period){
-  let d = new Date(date);
-  let now = new Date();
+function addSub() {
+  const name = document.getElementById("name").value;
+  const price = +document.getElementById("price").value;
+  const date = document.getElementById("date").value;
 
-  while(d < now){
-    if(period==="month") d.setMonth(d.getMonth()+1);
-    if(period==="year") d.setFullYear(d.getFullYear()+1);
-  }
-  return d;
-}
+  if (!name || !price || !date) return alert("Заполни все поля");
 
-// добавить
-function add(){
-  subs.push({
-    id: Date.now(),
-    name: name.value,
-    price: +price.value,
-    date: date.value,
-    period: period.value
-  });
+  subs.push({ name, price, date });
   save();
   render();
 }
 
-// удалить
-function del(id){
-  subs = subs.filter(s=>s.id!==id);
+function removeSub(index) {
+  subs.splice(index, 1);
   save();
   render();
 }
 
-// редактировать
-function edit(id){
-  let s = subs.find(x=>x.id===id);
-  let newName = prompt("Название", s.name);
-  if(!newName) return;
+function render() {
+  const list = document.getElementById("list");
+  list.innerHTML = "";
 
-  s.name = newName;
-  save();
-  render();
-}
+  let total = 0;
 
-// рендер + сортировка + подсветка
-function render(){
-  list.innerHTML="";
+  subs.forEach((s, i) => {
+    total += s.price;
 
-  subs
-  .map(s=>({...s, next: nextDate(s.date, s.period)}))
-  .sort((a,b)=>a.next - b.next)
-  .forEach(s=>{
-    let diff = (s.next - new Date())/(1000*60*60*24);
-
-    let cls="";
-    if(diff<1) cls="today";
-    else if(diff<3) cls="soon";
-
-    let el=document.createElement("div");
-    el.className="card "+cls;
-
-    el.innerHTML=`
+    const el = document.createElement("div");
+    el.className = "card";
+    el.innerHTML = `
       <b>${s.name}</b><br>
       ${s.price} ₽<br>
-      ${s.next.toLocaleDateString()}<br>
-      <button onclick="del(${s.id})">Удалить</button>
-      <button onclick="edit(${s.id})">Редактировать</button>
+      Следующее списание: ${s.date}<br>
+      <button onclick="removeSub(${i})">Удалить</button>
     `;
-
     list.appendChild(el);
-
-    // локальные уведомления (при открытии)
-    if(Notification.permission==="granted" && diff<1){
-      new Notification("Сегодня списание: "+s.name);
-    }
   });
-}
 
-// PWA
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register("sw.js");
+  document.getElementById("total").innerText = total;
 }
-
-// разрешение уведомлений
-Notification.requestPermission();
 
 render();
 </script>
