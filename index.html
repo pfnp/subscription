@@ -1,39 +1,133 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Трекер привычек</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Subscriptions</title>
 
-  <!-- Manifest для PWA -->
-  <link rel="manifest" href="manifest.json">
+<link rel="manifest" href="manifest.json">
 
-  <!-- Стили -->
-  <link rel="stylesheet" href="style.css">
-
-  <!-- Favicon (можно добавить свой icon.png) -->
-  <link rel="icon" href="icon.png">
+<style>
+body { font-family: Arial; background:#111; color:#fff; max-width:600px; margin:auto;}
+input, button, select { padding:10px; margin:5px;}
+.card { border:1px solid #444; padding:10px; margin-top:10px; border-radius:10px;}
+.today { border-color:red; }
+.soon { border-color:orange; }
+</style>
 </head>
+
 <body>
 
-<div class="app">
-  <h1>Трекер привычек</h1>
+<h2>Подписки</h2>
 
-  <button onclick="toggleTheme()">🌙</button>
+<input id="name" placeholder="Название">
+<input id="price" type="number" placeholder="Цена">
+<input id="date" type="date">
 
-  <div id="today"></div>
-  <div id="stats">0 / 0 выполнено</div>
+<select id="period">
+  <option value="month">Месяц</option>
+  <option value="year">Год</option>
+</select>
 
-  <div class="input-group">
-    <input id="habitInput" placeholder="Новая привычка..." />
-    <button onclick="addHabit()">+</button>
-  </div>
+<button onclick="add()">Добавить</button>
 
-  <ul id="habitList"></ul>
-</div>
+<div id="list"></div>
 
-<!-- Скрипт -->
-<script src="script.js" defer></script>
+<script>
+// хранилище
+let subs = JSON.parse(localStorage.getItem("subs") || "[]");
+
+function save(){
+  localStorage.setItem("subs", JSON.stringify(subs));
+}
+
+// пересчет даты
+function nextDate(date, period){
+  let d = new Date(date);
+  let now = new Date();
+
+  while(d < now){
+    if(period==="month") d.setMonth(d.getMonth()+1);
+    if(period==="year") d.setFullYear(d.getFullYear()+1);
+  }
+  return d;
+}
+
+// добавить
+function add(){
+  subs.push({
+    id: Date.now(),
+    name: name.value,
+    price: +price.value,
+    date: date.value,
+    period: period.value
+  });
+  save();
+  render();
+}
+
+// удалить
+function del(id){
+  subs = subs.filter(s=>s.id!==id);
+  save();
+  render();
+}
+
+// редактировать
+function edit(id){
+  let s = subs.find(x=>x.id===id);
+  let newName = prompt("Название", s.name);
+  if(!newName) return;
+
+  s.name = newName;
+  save();
+  render();
+}
+
+// рендер + сортировка + подсветка
+function render(){
+  list.innerHTML="";
+
+  subs
+  .map(s=>({...s, next: nextDate(s.date, s.period)}))
+  .sort((a,b)=>a.next - b.next)
+  .forEach(s=>{
+    let diff = (s.next - new Date())/(1000*60*60*24);
+
+    let cls="";
+    if(diff<1) cls="today";
+    else if(diff<3) cls="soon";
+
+    let el=document.createElement("div");
+    el.className="card "+cls;
+
+    el.innerHTML=`
+      <b>${s.name}</b><br>
+      ${s.price} ₽<br>
+      ${s.next.toLocaleDateString()}<br>
+      <button onclick="del(${s.id})">Удалить</button>
+      <button onclick="edit(${s.id})">Редактировать</button>
+    `;
+
+    list.appendChild(el);
+
+    // локальные уведомления (при открытии)
+    if(Notification.permission==="granted" && diff<1){
+      new Notification("Сегодня списание: "+s.name);
+    }
+  });
+}
+
+// PWA
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register("sw.js");
+}
+
+// разрешение уведомлений
+Notification.requestPermission();
+
+render();
+</script>
 
 </body>
 </html>
