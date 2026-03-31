@@ -1,8 +1,0 @@
-{
-  "name": "Subscriptions Tracker",
-  "short_name": "Subs",
-  "start_url": ".",
-  "display": "standalone",
-  "background_color": "#111",
-  "theme_color": "#111"
-}
